@@ -1,0 +1,43 @@
+// Konfiguracja generatora klienta Prisimy
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Konfiguracja połączenia z bazą PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Tabela Użytkowników
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String   // Zaszyfrowane hasło
+  createdAt DateTime @default(now())
+  reviews   Review[] // Relacja do recenzji
+}
+
+// 2. Tabela Filmów
+model Movie {
+  id            Int      @id @default(autoincrement())
+  title         String
+  director      String
+  description   String
+  averageRating Float?   @default(0.0) // Średnia ocen
+  reviews       Review[] // Relacja do recenzji
+  createdAt     DateTime @default(now())
+}
+
+// 3. Tabela Ocen i Komentarzy (Łącząca użytkownika z filmem)
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int      // Ocena od 1 do 10
+  comment   String   // Komentarz tekstowy
+  userId    Int
+  movieId   Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
