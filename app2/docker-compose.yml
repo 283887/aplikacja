@@ -3,11 +3,11 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: app2
+    container_name: filmweb
     environment:
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: app_password
-      POSTGRES_DB: app_db
+      POSTGRES_USER: filmweb_user
+      POSTGRES_PASSWORD: filmweb_password
+      POSTGRES_DB: filmweb_db
     ports:
       - "5432:5432"
     volumes:
