@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: app2
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: filmweb_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://filmweb_user:filmweb_password@postgres:5432/filmweb_db?schema=public
+      - JWT_SECRET=twoj_bardzo_tajny_klucz_jwt_zmien_go_tutaj
+      - PORT=3000
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
