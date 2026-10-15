@@ -8,6 +8,6 @@
 (Laravel), Ruby on Rails
 
 ## Pomysł projektu:
-O:
+Podróba filmebu
 
 ## Szkielet aplikacji:
