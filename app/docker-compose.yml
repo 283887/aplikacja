@@ -1,1 +1,30 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: lab_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: "postgresql://postgres:secretpassword@db:5432/lab_db"
+      JWT_ACCESS_SECRET: "access_secret_key_123"
+      JWT_REFRESH_SECRET: "refresh_secret_key_456"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
 
