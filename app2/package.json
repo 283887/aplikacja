@@ -1,1 +1,25 @@
-
+{
+  "name": "projekt-filmweb",
+  "version": "1.0.0",
+  "description": "Aplikacja webowa inspirowana filmwebem (SSR + Node.js + Express + PostgreSQL)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.9",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0",
+    "nodemon": "^3.1.0"
+  }
+}
