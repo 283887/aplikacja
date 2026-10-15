@@ -11,3 +11,20 @@
 Podróba filmebu
 
 ## Szkielet aplikacji:
+````text
+app/
+├── migrations/
+│   └── 001_init.sql          # Skrypt migracji bazy danych
+├── views/
+│   ├── login.ejs
+│   ├── register.ejs
+│   ├── dashboard.ejs
+│   └── reset-request.ejs
+├── .env
+├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
+├── package.json
+├── db.js
+└── server.js
+````
