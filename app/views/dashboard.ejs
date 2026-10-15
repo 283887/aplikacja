@@ -1,1 +1,23 @@
-
+<!DOCTYPE html>
+<html lang="pl">
+<head><meta charset="UTF-8"><title>Panel</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+        <div class="flex justify-between items-center border-b pb-4 mb-6">
+            <h1 class="text-xl font-bold text-slate-800">Panel Zalogowanego Użytkownika</h1>
+            <a href="/logout" class="px-4 py-2 bg-red-50 text-red-600 font-medium rounded-lg hover:bg-red-100">Wyloguj</a>
+        </div>
+        <p class="text-slate-600">Access Token jest bezpiecznie przechowywany w pamięci sesji przeglądarki (`sessionStorage`).</p>
+        <div id="user-info" class="mt-4 p-4 bg-indigo-50 rounded-lg text-indigo-900">Ładowanie danych sesji...</div>
+    </div>
+    <script>
+        // Sprawdzenie obecności tokenu w pamięci przeglądarki
+        const token = sessionStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/login';
+        } else {
+            document.getElementById('user-info').innerText = "Zalogowano poprawnie. Token JWT aktywny w pamięci przeglądarki.";
+        }
+    </script>
+</body>
+</html>
