@@ -23,3 +23,13 @@ projekt-filmweb/
 ├── docker-compose.yml
 └── README.md
 ````
+
+### How to run app:
+1. make sure that your repositories are updated: sudo apt update
+2. install docker: sudo apt install -y docker.io
+3. start docker: sudo systemctl start docker
+4. [optional] enable docker: sudo systemctl enable docker
+5. download repository: git clone https://github.com/283887/aplikacja.git
+6. change directory to aplikacja/app2
+7. run app: sudo docker compose up --build
+8. app runs on localhost port 3000 :) 
