@@ -17,5 +17,7 @@ projekt-filmweb/
 │
 ├── .env                  # Zmienne środowiskowe (baza, sekret JWT)
 ├── package.json
+├── Dockerfile
+├── docker-compose.yml
 └── README.md
 ````
