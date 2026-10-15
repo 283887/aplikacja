@@ -13,6 +13,8 @@ projekt-filmweb/
 │   │   ├── login.ejs     # Panel logowania / rejestracji
 │   │   ├── userMenu.ejs  # Menu użytkownika (edycja profilu)
 │   │   └── movie.ejs     # Szczegóły filmu + oceny i komentarze
+|   ├── prisma/
+|   |   ├── schema.prisma
 │   └── server.js         # Główny punkt wejścia aplikacji
 │
 ├── .env                  # Zmienne środowiskowe (baza, sekret JWT)
