@@ -1,1 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie i Rejestracja - FilmwebClone</title>
+    <!-- Bootstrap 5 CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-light d-flex align-items-center py-5" style="min-height: 100vh;">
 
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                
+                <!-- Przycisk powrotu do strony głównej -->
+                <div class="mb-3">
+                    <a href="/" class="text-decoration-none text-secondary">
+                        <i class="bi bi-arrow-left"></i> Powrót do strony głównej
+                    </a>
+                </div>
+
+                <!-- Wyświetlanie komunikatów o błędach lub sukcesie -->
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+                <% if (typeof success !== 'undefined' && success) { %>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <%= success %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+
+                <!-- Karta z zakładkami (Logowanie / Rejestracja) -->
+                <div class="card shadow border-0 rounded-4">
+                    <div class="card-body p-4 p-sm-5">
+                        
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-warning"><i class="bi bi-film"></i> FilmwebClone</h2>
+                            <p class="text-muted">Zaloguj się lub załóż konto</p>
+                        </div>
+
+                        <!-- Zakładki nawigacyjne -->
+                        <ul class="nav nav-pills nav-fill mb-4" id="authTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active fw-semibold" id="login-tab" data-bs-toggle="tab" data-bs-target="#login-pane" type="button" role="tab" aria-controls="login-pane" aria-selected="true">Logowanie</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link fw-semibold" id="register-tab" data-bs-toggle="tab" data-bs-target="#register-pane" type="button" role="tab" aria-controls="register-pane" aria-selected="false">Rejestracja</button>
+                            </li>
+                        </ul>
+
+                        <!-- Zawartość zakładek -->
+                        <div class="tab-content" id="authTabContent">
+                            
+                            <!-- 1. Formularz Logowania -->
+                            <div class="tab-pane fade show active" id="login-pane" role="tabpanel" aria-labelledby="login-tab">
+                                <form action="/auth/login" method="POST">
+                                    <div class="mb-3">
+                                        <label for="loginEmail" class="form-label">Email lub Nazwa użytkownika</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                            <input type="text" class="form-control" id="loginEmail" name="identifier" required placeholder="Wpisz email lub login">
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="loginPassword" class="form-label">Hasło</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                            <input type="password" class="form-control" id="loginPassword" name="password" required placeholder="••••••••">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-warning w-100 fw-bold py-2">Zaloguj się</button>
+                                </form>
+                            </div>
+
+                            <!-- 2. Formularz Rejestracji -->
+                            <div class="tab-pane fade" id="register-pane" role="tabpanel" aria-labelledby="register-tab">
+                                <form action="/auth/register" method="POST">
+                                    <div class="mb-3">
+                                        <label for="regUsername" class="form-label">Nazwa użytkownika</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-person-plus"></i></span>
+                                            <input type="text" class="form-control" id="regUsername" name="username" required placeholder="np. JanKowalski">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regEmail" class="form-label">Adres e-mail</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                                            <input type="email" class="form-control" id="regEmail" name="email" required placeholder="nazwa@example.com">
+                                        </div>
+                                        <div class="form-text">E-mail posłuży do pierwszego logowania i resetu hasła.</div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="regPassword" class="form-label">Hasło</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                                            <input type="password" class="form-control" id="regPassword" name="password" required placeholder="Minimum 6 znaków">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-dark w-100 fw-bold py-2">Utwórz konto</button>
+                                </form>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
