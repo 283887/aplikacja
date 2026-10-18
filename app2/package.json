@@ -3,14 +3,9 @@
   "version": "1.0.0",
   "description": "Aplikacja webowa inspirowana filmwebem (SSR + Node.js + Express + PostgreSQL)",
   "main": "src/server.js",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev"
-  },
   "dependencies": {
     "@prisma/client": "^5.10.0",
+    "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
@@ -21,5 +16,15 @@
   "devDependencies": {
     "prisma": "^5.10.0",
     "nodemon": "^3.1.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "npx prisma db seed"
   }
 }

@@ -98,6 +98,18 @@
                 </div>
 
             </div>
+<!-- Karta: Usuwanie konta -->
+                <div class="card shadow-sm border-0 mt-4 rounded-4 border-danger">
+                    <div class="card-body p-4">
+                        <h4 class="card-title mb-3 text-danger"><i class="bi bi-exclamation-triangle"></i> Usuwanie konta</h4>
+                        <p class="text-muted small">Tej operacji nie można cofnąć. Wszystkie Twoje dane i recenzje zostaną bezpowrotnie usunięte.</p>
+                        <form action="/user/delete" method="POST" onsubmit="return confirm('Czy na pewno chcesz bezpowrotnie usunąć swoje konto?');">
+                            <button type="submit" class="btn btn-danger fw-semibold">
+                                <i class="bi bi-trash"></i> Usuń konto
+                            </button>
+                        </form>
+                    </div>
+                </div>
         </div>
     </main>
 
