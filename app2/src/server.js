@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const validator = require('validator');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -176,6 +177,121 @@ app.get('/auth/logout', (req, res) => {
     res.clearCookie('token');
     res.redirect('/');
 });
+
+// Trasy resetowania hasła (Zadanie dodatkowe)
+
+// Przekierowanie po wklejeniu tokenu z formularza
+app.post('/auth/enter-token', (req, res) => {
+    const token = (req.body.token || '').trim();
+    if (!token) {
+        return res.render('forgot-password', { error: 'Wprowadź token resetujący.', success: null });
+    }
+    res.redirect('/auth/reset-password/' + encodeURIComponent(token));
+});
+
+app.get(['/forgot-password', '/auth/forgot-password'], (req, res) => {
+    res.render('forgot-password', { error: null, success: null });
+});
+
+app.post('/auth/forgot-password', async (req, res) => {
+    try {
+        const email = (req.body.email || '').trim().toLowerCase();
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return res.render('forgot-password', {
+                error: null,
+                success: 'Jeśli podany adres istnieje w systemie, link do resetu hasła został wygenerowany.'
+            });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minut ważności
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { resetToken, resetTokenExpiry }
+        });
+
+        const resetUrl = `http://localhost:3000/auth/reset-password/${resetToken}`;
+        console.log('================================================================');
+        console.log(`[RESET HASŁA] Dane dla: ${email}`);
+        console.log(`[TOKEN] ${resetToken}`);
+        console.log(resetUrl);
+        console.log('================================================================');
+
+        res.render('forgot-password', {
+            error: null,
+            success: 'Jeśli podany adres istnieje w systemie, link do resetu hasła został wygenerowany (sprawdź konsolę serwera).'
+        });
+    } catch (err) {
+        console.error(err);
+        res.render('forgot-password', { error: 'Wystąpił błąd serwera.', success: null });
+    }
+});
+
+app.get('/auth/reset-password/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: { gt: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.render('login', { error: 'Token resetowania hasła jest nieprawidłowy lub wygasł.', success: null });
+        }
+
+        res.render('reset-password', { token, error: null });
+    } catch (err) {
+        console.error(err);
+        res.redirect('/login');
+    }
+});
+
+app.post('/auth/reset-password/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const password = req.body.password || '';
+
+        const user = await prisma.user.findFirst({
+            where: {
+                resetToken: token,
+                resetTokenExpiry: { gt: new Date() }
+            }
+        });
+
+        if (!user) {
+            return res.render('login', { error: 'Token resetowania hasła jest nieprawidłowy lub wygasł.', success: null });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.render('reset-password', {
+                token,
+                error: 'Hasło musi mieć co najmniej 8 znaków, zawierać dużą literę oraz cyfrę.'
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetToken: null,
+                resetTokenExpiry: null
+            }
+        });
+
+        res.render('login', { error: null, success: 'Hasło zostało pomyślnie zmienione. Możesz się zalogować.' });
+    } catch (err) {
+        console.error(err);
+        res.render('reset-password', { token: req.params.token, error: 'Wystąpił błąd podczas zmiany hasła.' });
+    }
+});
+
 
 // 6. Menu użytkownika (Dostępne tylko dla zalogowanych)
 app.get('/user/menu', (req, res) => {
