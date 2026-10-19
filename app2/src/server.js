@@ -255,7 +255,11 @@ app.post('/movies/:id/review', async (req, res) => {
     }
 });
 
-// Uruchomienie serwera
-app.listen(PORT, () => {
-    console.log(`Serwer FilmwebClone działa na porcie ${PORT}`);
-});
+// Uruchomienie serwera (tylko poza środowiskiem testowym)
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`Serwer FilmwebClone działa na porcie ${PORT}`);
+    });
+}
+
+module.exports = app;
