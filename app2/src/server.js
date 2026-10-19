@@ -1,3 +1,4 @@
+const validator = require('validator');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -78,13 +79,40 @@ app.get('/login', (req, res) => {
 // 3. Obsługa Rejestracji
 app.post('/auth/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        let { username, email, password } = req.body;
 
+        username = (username || '').trim();
+        email = (email || '').trim().toLowerCase();
+        password = password || '';
+
+        // 1. Walidacja obecności pól
         if (!username || !email || !password) {
             return res.render('login', { error: 'Wszystkie pola są wymagane!', success: null });
         }
 
-        // Sprawdzanie czy użytkownik już istnieje
+        // 2. Walidacja formatu e-mail
+        if (!validator.isEmail(email)) {
+            return res.render('login', { error: 'Podaj poprawny adres e-mail (np. user@domena.pl).', success: null });
+        }
+
+        // 3. Walidacja loginu (alfanumeryczny, 3-25 znaków)
+        if (!validator.isAlphanumeric(username, 'pl-PL') || username.length < 3 || username.length > 25) {
+            return res.render('login', { 
+                error: 'Nazwa użytkownika musi mieć od 3 do 25 znaków i zawierać wyłącznie litery i cyfry.', 
+                success: null 
+            });
+        }
+
+        // 4. Walidacja siły hasła (min. 8 znaków, wielka litera, cyfra)
+        const passwordPolicy = { minLength: 8, minUppercase: 1, minNumbers: 1, minSymbols: 0 };
+        if (!validator.isStrongPassword(password, passwordPolicy)) {
+            return res.render('login', { 
+                error: 'Hasło musi mieć co najmniej 8 znaków, zawierać przynajmniej jedną wielką literę i jedną cyfrę.', 
+                success: null 
+            });
+        }
+
+        // Sprawdzanie unikalności
         const existingUser = await prisma.user.findFirst({
             where: { OR: [{ email }, { username }] }
         });
