@@ -6,6 +6,9 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const otplib = require('otplib');
+const authenticator = otplib.authenticator || otplib;
+const QRCode = require('qrcode');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -153,6 +156,23 @@ app.post('/auth/login', async (req, res) => {
         if (!isPasswordValid) {
             return res.render('login', { error: 'Nieprawidłowy login lub hasło.', success: null });
         }
+	// --- OBSŁUGA 2FA (TOTP) ---
+        if (user.isTwoFactorEnabled) {
+            // CZYŚCIMY stary token sesyjny, aby użytkownik NIE był zalogowany przed podaniem kodu 2FA!
+            res.clearCookie('token');
+
+            // Tymczasowy token na czas weryfikacji 6-cyfrowego kodu (ważny 5 minut)
+            const pendingToken = jwt.sign({ userId: user.id, is2faPending: true }, JWT_SECRET, { expiresIn: '5m' });
+            res.cookie('pending_2fa', pendingToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 5 * 60 * 1000
+            });
+            return res.redirect('/auth/2fa/verify');
+        }
+        // --------------------------
+
 
         // Tworzenie tokena JWT (ważność 10 minut)
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '10m' });
@@ -368,6 +388,213 @@ app.post('/movies/:id/review', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.redirect('/');
+    }
+});
+
+// ==========================================
+// 2FA - GOOGLE AUTHENTICATOR (TOTP)
+// ==========================================
+
+// 1. Ekran konfiguracji 2FA i generowanie QR Code (dostępny po zalogowaniu)
+app.get('/auth/2fa/setup', async (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) return res.redirect('/login');
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+        if (!user) return res.redirect('/login');
+
+        // Generujemy nowy unikalny sekret Base32
+        const secret = authenticator.generateSecret();
+
+        // Zapisujemy tymczasowo wygenerowany sekret w bazie
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { twoFactorSecret: secret }
+        });
+	const otpauth = typeof authenticator.keyURI === 'function'
+	    ? authenticator.keyURI(user.email, 'FilmwebClone', secret)
+	    : `otpauth://totp/FilmwebClone:${encodeURIComponent(user.email)}?secret=${secret}&issuer=FilmwebClone`
+        const qrCodeUrl = await QRCode.toDataURL(otpauth);
+
+        res.render('setup-2fa', { qrCodeUrl, error: null });
+    } catch (err) {
+        console.error('Błąd konfiguracji 2FA:', err);
+        res.redirect('/');
+    }
+});
+
+// 2. Aktywacja 2FA - weryfikacja pierwszego kodu z aplikacji
+app.post('/auth/2fa/enable', async (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) return res.redirect('/login');
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+        const userCode = (req.body.token || '').trim();
+
+        const isValid = await authenticator.verify({
+            token: userCode,
+            secret: user.twoFactorSecret
+        });
+
+        if (!isValid) {
+	    const otpauth = typeof authenticator.keyURI === 'function'
+	        ? authenticator.keyURI(user.email, 'FilmwebClone', user.twoFactorSecret)
+	        : `otpauth://totp/FilmwebClone:${encodeURIComponent(user.email)}?secret=${user.twoFactorSecret}&issuer=FilmwebClone`;
+            const qrCodeUrl = await QRCode.toDataURL(otpauth);
+            return res.render('setup-2fa', { qrCodeUrl, error: 'Nieprawidłowy kod z aplikacji. Spróbuj ponownie.' });
+        }
+
+        // Aktywujemy 2FA dla konta
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { isTwoFactorEnabled: true }
+        });
+
+        res.redirect('/');
+    } catch (err) {
+        console.error('Błąd włączania 2FA:', err);
+        res.redirect('/auth/2fa/setup');
+    }
+});
+
+// 3. Widok weryfikacji 2FA podczas logowania
+app.get('/auth/2fa/verify', (req, res) => {
+    const pending = req.cookies.pending_2fa;
+    if (!pending) return res.redirect('/login');
+    res.render('verify-2fa', { error: null });
+});
+
+// 4. Zatwierdzenie kodu 2FA i pełne zalogowanie
+app.post('/auth/2fa/verify', async (req, res) => {
+    console.log('--- [2FA DEBUG START] ---');
+    console.log('Otrzymano żądanie POST /auth/2fa/verify');
+    console.log('req.body:', req.body);
+    console.log('req.cookies:', req.cookies);
+
+    try {
+        const pending = req.cookies.pending_2fa;
+        if (!pending) {
+            console.log('[2FA DEBUG] Brak ciasteczka pending_2fa -> redirect /login');
+            return res.redirect('/login');
+        }
+
+        const decoded = jwt.verify(pending, JWT_SECRET);
+        console.log('[2FA DEBUG] Zdekodowany pending token:', decoded);
+
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+        console.log('[2FA DEBUG] Użytkownik z bazy:', user ? { id: user.id, email: user.email, hasSecret: !!user.twoFactorSecret, is2fa: user.isTwoFactorEnabled } : null);
+
+        if (!user || !user.twoFactorSecret) {
+            console.log('[2FA DEBUG] Brak użytkownika lub brak twoFactorSecret w bazie!');
+            res.clearCookie('pending_2fa');
+            return res.redirect('/login');
+        }
+
+        const userCode = String(req.body.token || '').trim();
+        console.log('[2FA DEBUG] Kod wpisany przez użytkownika:', userCode);
+        console.log('[2FA DEBUG] Sekret w bazie:', user.twoFactorSecret);
+
+        let isValid = false;
+        try {
+            const result = await authenticator.verify({
+                token: userCode,
+                secret: user.twoFactorSecret
+            });
+
+            // Jeśli zwrócono obiekt { valid: true/false }, bierzemy result.valid;
+            // w przeciwnym razie bierzemy samą wartość result (boolean)
+            if (typeof result === 'object' && result !== null && 'valid' in result) {
+                isValid = Boolean(result.valid);
+            } else {
+                isValid = Boolean(result);
+            }
+
+            console.log('[2FA DEBUG] Przetworzony wynik isValid (boolean):', isValid);
+        } catch (e) {
+            console.log('[2FA DEBUG] authenticator.verify rzucił błąd:', e.message);
+            isValid = false;
+        }
+
+        if (!isValid) {
+            console.log('[2FA DEBUG] Kod NIEPRAWIDŁOWY. Blokuję dostęp.');
+            return res.render('verify-2fa', { error: 'Nieprawidłowy kod 2FA. Spróbuj ponownie.' });
+        }
+
+        if (!isValid) {
+            console.log('[2FA DEBUG] Kod NIEPRAWIDŁOWY. Wywołuję res.render(verify-2fa)');
+            return res.render('verify-2fa', { error: 'Nieprawidłowy kod 2FA. Spróbuj ponownie.' });
+        }
+
+        console.log('[2FA DEBUG] Kod PRAWIDŁOWY. Ustawiam token sesyjny.');
+        res.clearCookie('pending_2fa');
+
+        const fullToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '10m' });
+        res.cookie('token', fullToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 10 * 60 * 1000
+        });
+
+        console.log('[2FA DEBUG] Przekierowuję na /');
+        return res.redirect('/');
+    } catch (err) {
+        console.error('[2FA DEBUG] Błąd w głównym bloku catch:', err);
+        res.clearCookie('pending_2fa');
+        return res.redirect('/login');
+    }
+});
+
+// 5. Wyłączenie 2FA (wymaga potwierdzenia hasłem)
+app.post('/auth/2fa/disable', async (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) return res.redirect('/login');
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+        if (!user) return res.redirect('/login');
+
+        const { currentPassword } = req.body;
+        if (!currentPassword) {
+            return res.render('userMenu', { 
+                user, 
+                error: 'Podaj aktualne hasło, aby wyłączyć 2FA.', 
+                success: null 
+            });
+        }
+
+        // Weryfikacja hasła użytkownika przed wyłączeniem 2FA
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) {
+            return res.render('userMenu', { 
+                user, 
+                error: 'Nieprawidłowe hasło. 2FA nie zostało wyłączone.', 
+                success: null 
+            });
+        }
+
+        // Czyszczenie flagi oraz sekretu w bazie danych
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isTwoFactorEnabled: false,
+                twoFactorSecret: null
+            }
+        });
+
+        return res.render('userMenu', { 
+            user: updatedUser, 
+            error: null, 
+            success: 'Uwierzytelnianie dwuskładnikowe (2FA) zostało pomyślnie wyłączone.' 
+        });
+    } catch (err) {
+        console.error('Błąd podczas wyłączania 2FA:', err);
+        res.redirect('/user/menu');
     }
 });
 

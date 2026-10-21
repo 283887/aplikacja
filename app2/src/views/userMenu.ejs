@@ -98,6 +98,45 @@
                 </div>
 
             </div>
+</div>
+
+<!-- Karta: Uwierzytelnianie dwuskładnikowe (2FA) -->
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
+                    <div class="card-body p-4">
+                        <h4 class="card-title mb-3 text-secondary"><i class="bi bi-shield-lock"></i> Uwierzytelnianie dwuskładnikowe (2FA)</h4>
+                        
+                        <% if (user.isTwoFactorEnabled) { %>
+                            <div class="alert alert-success d-flex align-items-center mb-3" role="alert">
+                                <i class="bi bi-shield-check me-2 fs-5"></i>
+                                <div>2FA jest obecnie <strong>włączone</strong> i aktywne na Twoim koncie.</div>
+                            </div>
+
+                            <form action="/auth/2fa/disable" method="POST">
+                                <div class="mb-3">
+                                    <label for="disable2faPassword" class="form-label">Potwierdź obecnym hasłem, aby wyłączyć 2FA:</label>
+                                    <input 
+                                        type="password" 
+                                        class="form-control" 
+                                        id="disable2faPassword" 
+                                        name="currentPassword" 
+                                        placeholder="Wpisz swoje hasło" 
+                                        required
+                                    >
+                                </div>
+                                <button type="submit" class="btn btn-outline-danger fw-semibold" onclick="return confirm('Czy na pewno chcesz wyłączyć 2FA? Twoje konto będzie mniej bezpieczne.');">
+                                    <i class="bi bi-shield-x"></i> Wyłącz 2FA
+                                </button>
+                            </form>
+                        <% } else { %>
+                            <p class="text-muted small mb-3">
+                                Zabezpiecz swoje konto za pomocą aplikacji Google Authenticator. Przy każdym logowaniu wymagany będzie dodatkowy 6-cyfrowy kod.
+                            </p>
+                            <a href="/auth/2fa/setup" class="btn btn-warning fw-semibold">
+                                <i class="bi bi-shield-plus"></i> Skonfiguruj i włącz 2FA
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
 <!-- Karta: Usuwanie konta -->
                 <div class="card shadow-sm border-0 mt-4 rounded-4 border-danger">
                     <div class="card-body p-4">

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weryfikacja 2FA - FilmwebClone</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-light d-flex align-items-center py-5" style="min-height: 100vh;">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-5">
+
+                <div class="mb-3">
+                    <a href="/login" class="text-decoration-none text-secondary">
+                        <i class="bi bi-arrow-left"></i> Anuluj i wróć do logowania
+                    </a>
+                </div>
+
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <%= error %>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                <% } %>
+
+                <div class="card shadow border-0 rounded-4">
+                    <div class="card-body p-4 p-sm-5">
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-warning"><i class="bi bi-shield-check"></i> Weryfikacja 2FA</h2>
+                            <p class="text-muted small">Wpisz 6-cyfrowy kod z aplikacji Google Authenticator, aby dokończyć logowanie.</p>
+                        </div>
+
+                        <form action="/auth/2fa/verify" method="POST">
+                            <div class="mb-4">
+                                <label for="token" class="form-label fw-semibold">Kod jednorazowy</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
+                                    <input type="text" class="form-control form-control-lg text-center fw-bold fs-4" id="token" name="token" maxlength="6" pattern="[0-9]{6}" required placeholder="123456" autofocus autocomplete="off">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100 fw-bold py-2">Zaloguj się</button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

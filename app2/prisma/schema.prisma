@@ -15,8 +15,12 @@ model User {
   username  String   @unique
   email     String   @unique
   password  String   // Zaszyfrowane hasło
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
   createdAt DateTime @default(now())
   reviews   Review[] // Relacja do recenzji
+  twoFactorSecret String?
+  isTwoFactorEnabled Boolean @default(false)
 }
 
 // 2. Tabela Filmów
