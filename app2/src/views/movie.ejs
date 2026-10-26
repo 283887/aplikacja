@@ -10,7 +10,7 @@
 </head>
 <body class="bg-light">
 
-    <!-- Nawigacja / Pasek górny -->
+    <!-- Nawigacja -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
             <a class="navbar-brand fw-bold text-warning" href="/">
@@ -20,19 +20,13 @@
                 <a href="/" class="btn btn-outline-light me-2">
                     <i class="bi bi-house"></i> Strona główna
                 </a>
-                <% if (typeof user !== 'undefined' && user) { %>
-                    <div class="dropdown">
-                        <a class="btn btn-outline-light dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> <%= user.username %>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/user/menu">Menu użytkownika</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/auth/logout">Wyloguj się</a></li>
-                        </ul>
-                    </div>
+                <% if (user) { %>
+                    <a href="/user/menu" class="btn btn-warning me-2">
+                        <i class="bi bi-person-circle"></i> Menu użytkownika
+                    </a>
+                    <a href="/auth/logout" class="btn btn-outline-danger">Wyloguj</a>
                 <% } else { %>
-                    <a href="/login" class="btn btn-warning fw-semibold">Zaloguj się</a>
+                    <a href="/login" class="btn btn-warning">Zaloguj się</a>
                 <% } %>
             </div>
         </div>
@@ -40,102 +34,82 @@
 
     <!-- Główna zawartość -->
     <main class="container my-5">
-        
-        <!-- Komunikaty -->
-        <% if (typeof error !== 'undefined' && error) { %>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <%= error %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <% } %>
-        <% if (typeof success !== 'undefined' && success) { %>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <%= success %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        <% } %>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
 
-        <!-- Szczegóły filmu -->
-        <div class="card shadow-sm border-0 mb-5 rounded-4 overflow-hidden">
-            <div class="card-body p-4 p-md-5">
-                <div class="row align-items-center">
-                    <div class="col-md-9">
-                        <h1 class="display-5 fw-bold text-dark mb-2"><%= movie.title %></h1>
-                        <h4 class="text-muted mb-3"><i class="bi bi-camera-reels"></i> Reżyseria: <span class="text-secondary"><%= movie.director %></span></h4>
-                        <p class="lead text-secondary"><%= movie.description %></p>
-                    </div>
-                    <div class="col-md-3 text-md-end mt-4 mt-md-0">
-                        <div class="p-3 bg-light border rounded-4 d-inline-block text-center shadow-sm">
-                            <span class="d-block text-muted small text-uppercase fw-bold">Średnia ocen</span>
-                            <span class="fs-2 fw-bold text-warning">
-                                <i class="bi bi-star-fill"></i> <%= movie.averageRating ? movie.averageRating.toFixed(1) : 'Brak' %>
-                            </span>
-                            <span class="d-block text-muted small">/ 10</span>
-                        </div>
+                <!-- Szczegóły filmu -->
+                <div class="card shadow-sm border-0 mb-4 rounded-4 p-4">
+                    <h1 class="fw-bold mb-2"><%= movie.title %></h1>
+                    <p class="text-muted mb-3">Reżyseria: <strong><%= movie.director %></strong> | Rok: <strong><%= movie.year %></strong></p>
+                    <p class="mb-3"><%= movie.description %></p>
+                    <div>
+                        <span class="badge bg-warning text-dark fs-6 p-2">
+                            <i class="bi bi-star-fill"></i> Średnia ocena: 
+                            <%= movie.averageRating !== null ? movie.averageRating.toFixed(1) + ' / 10' : 'Brak ocen' %>
+                        </span>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="row">
-            <!-- Sekcja komentarzy i recenzji -->
-            <div class="col-lg-8">
-                <h3 class="mb-4 fw-bold"><i class="bi bi-chat-left-text"></i> Oceny i komentarze</h3>
+                <!-- Sekcja dodawania recenzji -->
+                <div class="card shadow-sm border-0 mb-4 rounded-4 p-4">
+                    <h4 class="mb-3"><i class="bi bi-chat-square-text"></i> Dodaj recenzję</h4>
+                    <% if (user) { %>
+                        <form action="/movies/<%= movie.id %>/review" method="POST">
+                            <div class="mb-3">
+                                <label for="rating" class="form-label">Ocena (1-10)</label>
+                                <select class="form-select" id="rating" name="rating" required>
+                                    <option value="" disabled selected>Wybierz ocenę</option>
+                                    <% for(let i = 1; i <= 10; i++) { %>
+                                        <option value="<%= i %>"><%= i %> / 10</option>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comment" class="form-label">Komentarz</label>
+                                <textarea class="form-control" id="comment" name="comment" rows="3" required placeholder="Napisz co sądzisz o tym filmie..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning fw-semibold">Dodaj recenzję</button>
+                        </form>
+                    <% } else { %>
+                        <p class="text-muted mb-0">Musisz być <a href="/login">zalogowany</a>, aby dodać recenzję.</p>
+                    <% } %>
+                </div>
 
-                <% if (typeof movie.reviews !== 'undefined' && movie.reviews.length > 0) { %>
+                <!-- Lista recenzji -->
+                <h3 class="mb-3">Recenzje użytkowników (<%= movie.reviews.length %>)</h3>
+                <% if (movie.reviews.length === 0) { %>
+                    <p class="text-muted">Ten film nie ma jeszcze żadnych recenzji. Bądź pierwszy!</p>
+                <% } else { %>
                     <% movie.reviews.forEach(review => { %>
                         <div class="card shadow-sm border-0 mb-3 rounded-3">
-                            <div class="card-body p-4">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-person-circle text-secondary"></i> <%= review.user.username %></h5>
-                                    <span class="badge bg-warning text-dark fs-6 px-3 py-2">
-                                        <i class="bi bi-star-fill"></i> <%= review.rating %> / 10
-                                    </span>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-2">
+                                    <!-- Awatar użytkownika w recenzji -->
+                                    <% if (review.user && review.user.profileImage) { %>
+                                        <img src="<%= review.user.profileImage %>" alt="Avatar" class="rounded-circle border me-2" style="width: 45px; height: 45px; object-fit: cover;">
+                                    <% } else { %>
+                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 45px; height: 45px; font-size: 18px;">
+                                            <i class="bi bi-person"></i>
+                                        </div>
+                                    <% } %>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold"><%= review.user ? review.user.username : 'Nieznany użytkownik' %></h6>
+                                        <small class="text-warning">
+                                            <% for(let i = 1; i <= 10; i++) { %>
+                                                <i class="bi bi-star<%= i <= review.rating ? '-fill' : '' %>"></i>
+                                            <% } %>
+                                            (<%= review.rating %>/10)
+                                        </small>
+                                    </div>
                                 </div>
-                                <p class="text-muted small mb-2"><%= new Date(review.createdAt).toLocaleDateString('pl-PL') %></p>
-                                <p class="card-text mb-0"><%= review.comment %></p>
+                                <p class="card-text mt-2 mb-0"><%= review.comment %></p>
                             </div>
                         </div>
                     <% }) %>
-                <% } else { %>
-                    <div class="alert alert-info">
-                        Ten film nie ma jeszcze żadnych komentarzy. Bądź pierwszy i zostaw swoją opinię!
-                    </div>
                 <% } %>
-            </div>
 
-            <!-- Formularz dodawania oceny i komentarza -->
-            <div class="col-lg-4 mt-4 mt-lg-0">
-                <div class="card shadow-sm border-0 rounded-4">
-                    <div class="card-body p-4">
-                        <h4 class="card-title fw-bold mb-3"><i class="bi bi-star"></i> Oceń film</h4>
-                        
-                        <% if (typeof user !== 'undefined' && user) { %>
-                            <form action="/movies/<%= movie.id %>/review" method="POST">
-                                <div class="mb-3">
-                                    <label for="rating" class="form-label">Twoja ocena (1-10)</label>
-                                    <select class="form-select" id="rating" name="rating" required>
-                                        <option value="" selected disabled>Wybierz ocenę</option>
-                                        <% for(let i = 1; i <= 10; i++) { %>
-                                            <option value="<%= i %>"><%= i %> <%= i === 1 ? 'punkt' : (i < 5 ? 'punkty' : 'punktów') %></option>
-                                        <% } %>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="comment" class="form-label">Twój komentarz</label>
-                                    <textarea class="form-control" id="comment" name="comment" rows="4" required placeholder="Napisz co sądzisz o tym filmie..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-warning w-100 fw-bold py-2">Dodaj opinię</button>
-                            </form>
-                        <% } else { %>
-                            <p class="text-muted">Musisz być zalogowany, aby móc ocenić film i dodać komentarz.</p>
-                            <a href="/login" class="btn btn-outline-warning w-100 fw-semibold">Zaloguj się</a>
-                        <% } %>
-                    </div>
-                </div>
             </div>
         </div>
-
     </main>
 
     <!-- Bootstrap 5 JS Bundle CDN -->

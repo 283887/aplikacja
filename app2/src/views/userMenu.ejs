@@ -65,6 +65,45 @@
                     </div>
                 </div>
 
+                <!-- Karta: Zdjęcie profilowe (Upload + Usuwanie) -->
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
+                    <div class="card-body p-4">
+                        <h4 class="card-title mb-3 text-secondary"><i class="bi bi-image"></i> Zdjęcie profilowe</h4>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="me-3">
+                                <% if (user.profileImage) { %>
+                                    <img src="<%= user.profileImage %>" alt="Avatar" class="rounded-circle border border-warning" style="width: 80px; height: 80px; object-fit: cover;">
+                                <% } else { %>
+                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 80px; height: 80px; font-size: 32px;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                <% } %>
+                            </div>
+                            <div>
+                                <p class="text-muted small mb-0">Wgraj awatar w formacie JPG, PNG lub GIF (maksymalnie 2 MB).</p>
+                            </div>
+                        </div>
+
+                        <form action="/user/upload-avatar" method="POST" enctype="multipart/form-data" class="mb-2">
+                            <div class="mb-3">
+                                <input type="file" class="form-control" id="avatar" name="avatar" accept=".jpg, .jpeg, .png, .gif" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning fw-semibold">
+                                <i class="bi bi-upload"></i> Zapisz zdjęcie
+                            </button>
+                        </form>
+
+                        <% if (user.profileImage) { %>
+                            <form action="/user/delete-avatar" method="POST" onsubmit="return confirm('Czy na pewno chcesz usunąć zdjęcie profilowe?');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold mt-2">
+                                    <i class="bi bi-trash"></i> Usuń zdjęcie
+                                </button>
+                            </form>
+                        <% } %>
+                    </div>
+                </div>
+
                 <!-- Karta: Zmiana nazwy użytkownika -->
                 <div class="card shadow-sm border-0 mb-4 rounded-4">
                     <div class="card-body p-4">
@@ -79,8 +118,8 @@
                     </div>
                 </div>
 
-                <!-- Karta: Zmiana / Resetowanie hasła -->
-                <div class="card shadow-sm border-0 rounded-4">
+                <!-- Karta: Zmiana hasła -->
+                <div class="card shadow-sm border-0 mb-4 rounded-4">
                     <div class="card-body p-4">
                         <h4 class="card-title mb-3 text-secondary"><i class="bi bi-key"></i> Zmiana hasła</h4>
                         <form action="/user/update-password" method="POST">
@@ -97,10 +136,7 @@
                     </div>
                 </div>
 
-            </div>
-</div>
-
-<!-- Karta: Uwierzytelnianie dwuskładnikowe (2FA) -->
+                <!-- Karta: Uwierzytelnianie dwuskładnikowe (2FA) -->
                 <div class="card shadow-sm border-0 mb-4 rounded-4">
                     <div class="card-body p-4">
                         <h4 class="card-title mb-3 text-secondary"><i class="bi bi-shield-lock"></i> Uwierzytelnianie dwuskładnikowe (2FA)</h4>
@@ -137,8 +173,9 @@
                         <% } %>
                     </div>
                 </div>
-<!-- Karta: Usuwanie konta -->
-                <div class="card shadow-sm border-0 mt-4 rounded-4 border-danger">
+
+                <!-- Karta: Usuwanie konta -->
+                <div class="card shadow-sm border-0 rounded-4 border-danger">
                     <div class="card-body p-4">
                         <h4 class="card-title mb-3 text-danger"><i class="bi bi-exclamation-triangle"></i> Usuwanie konta</h4>
                         <p class="text-muted small">Tej operacji nie można cofnąć. Wszystkie Twoje dane i recenzje zostaną bezpowrotnie usunięte.</p>
@@ -149,6 +186,8 @@
                         </form>
                     </div>
                 </div>
+
+            </div>
         </div>
     </main>
 
