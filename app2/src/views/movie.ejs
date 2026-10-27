@@ -16,11 +16,11 @@
             <a class="navbar-brand" href="/">FilmwebClone</a>
             <div class="ms-auto">
                 <% if (user) { %>
-                    <span class="text-white me-3">Witaj, <%= user.username %>!</span>
-                    <a href="/logout" class="btn btn-outline-light btn-sm">Wyloguj</a>
+                    <span class="text-white me-3">Witaj, <a href="/user/menu" class="text-white text-decoration-none fw-bold"><%= user.username %></a>!</span>
+                    <a href="/auth/logout" class="btn btn-outline-light btn-sm">Wyloguj</a>
                 <% } else { %>
                     <a href="/login" class="btn btn-outline-light btn-sm me-2">Zaloguj</a>
-                    <a href="/register" class="btn btn-primary btn-sm">Rejestracja</a>
+                    <a href="/login" class="btn btn-primary btn-sm">Rejestracja</a>
                 <% } %>
             </div>
         </div>
@@ -39,7 +39,7 @@
                 <h3 class="text-warning mb-0"><i class="bi bi-star-fill"></i> <%= movie.averageRating ? movie.averageRating.toFixed(1) : 'Brak' %></h3>
                 <small class="text-muted">Średnia ocena</small>
 
-                <!-- Formularz oceny filmu dla zalogowanych (1 ocena na użytkownika) -->
+                <!-- Formularz oceny filmu dla zalogowanych -->
                 <% if (user) { %>
                     <form action="/movies/<%= movie.id %>/rate" method="POST" class="mt-3 w-100">
                         <div class="input-group input-group-sm">
@@ -80,7 +80,7 @@
                     <div class="card mb-3 border-0 bg-light">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="card-subtitle mb-0 text-primary fw-bold"><%= comment.user.username %></h6>
+                                <h6 class="card-subtitle mb-0 text-primary fw-bold"><%= comment.user ? comment.user.username : 'Nieznany' %></h6>
                                 <small class="text-muted">
                                     <%= new Date(comment.createdAt).toLocaleDateString('pl-PL') %>
                                     <% if (comment.isEdited) { %>
@@ -90,19 +90,20 @@
                             </div>
 
                             <!-- Treść komentarza -->
-                            <p class="card-text mb-2" id="comment-text-<%= comment.id %>"><%= comment.content %></p>
+                            <p class="card-text mb-2"><%= comment.content %></p>
 
                             <!-- Przyciski akcji dla właściciela komentarza -->
                             <% if (user && user.id === comment.userId) { %>
-                                <div class="mb-2">
+                                <div class="mb-2 d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;" onclick="toggleEditForm('<%= comment.id %>')">Edytuj</button>
-                                    <form action="/comments/<%= comment.id %>?_method=DELETE" method="POST" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.8rem;" onclick="return confirm('Na pewno usunąć komentarz?')">Usuń</button>
+                                    
+                                    <form action="/comments/<%= comment.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Na pewno usunąć komentarz wraz z odpowiedziami?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.8rem;">Usuń</button>
                                     </form>
                                 </div>
 
-                                <!-- Ukryty formularz edycji -->
-                                <form action="/comments/<%= comment.id %>?_method=PUT" method="POST" id="edit-form-<%= comment.id %>" class="d-none mt-2">
+                                <!-- POPRAWIONY FORMULARZ EDYCJI: akcja wskazuje na /comments/:id/edit -->
+                                <form action="/comments/<%= comment.id %>/edit" method="POST" id="edit-form-<%= comment.id %>" class="d-none mt-2">
                                     <div class="input-group input-group-sm mb-2">
                                         <input type="text" name="content" class="form-control" value="<%= comment.content %>" required>
                                         <button class="btn btn-success" type="submit">Zapisz</button>
@@ -117,7 +118,7 @@
                                     <i class="bi bi-reply"></i> Odpowiedz
                                 </button>
 
-                                <!-- Ukryty formularz odpowiedzi -->
+                                <!-- Formularz odpowiedzi -->
                                 <form action="/movies/<%= movie.id %>/comments" method="POST" id="reply-form-<%= comment.id %>" class="d-none mt-2">
                                     <input type="hidden" name="parentId" value="<%= comment.id %>">
                                     <div class="input-group input-group-sm">
@@ -134,7 +135,7 @@
                                         <div class="card mb-2 bg-white border-0 shadow-sm">
                                             <div class="card-body py-2">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                                    <span class="text-primary fw-bold" style="font-size: 0.9rem;"><%= reply.user.username %></span>
+                                                    <span class="text-primary fw-bold" style="font-size: 0.9rem;"><%= reply.user ? reply.user.username : 'Nieznany' %></span>
                                                     <small class="text-muted" style="font-size: 0.75rem;">
                                                         <%= new Date(reply.createdAt).toLocaleDateString('pl-PL') %>
                                                         <% if (reply.isEdited) { %>
@@ -146,14 +147,16 @@
 
                                                 <!-- Akcje dla odpowiedzi -->
                                                 <% if (user && user.id === reply.userId) { %>
-                                                    <div class="mb-1">
+                                                    <div class="mb-1 d-flex gap-2">
                                                         <button class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size: 0.75rem;" onclick="toggleEditForm('<%= reply.id %>')">Edytuj</button>
-                                                        <form action="/comments/<%= reply.id %>?_method=DELETE" method="POST" class="d-inline">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size: 0.75rem;" onclick="return confirm('Usunąć odpowiedź?')">Usuń</button>
+                                                        
+                                                        <form action="/comments/<%= reply.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Usunąć odpowiedź?');">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size: 0.75rem;">Usuń</button>
                                                         </form>
                                                     </div>
 
-                                                    <form action="/comments/<%= reply.id %>?_method=PUT" method="POST" id="edit-form-<%= reply.id %>" class="d-none mt-2">
+                                                    <!-- POPRAWIONY FORMULARZ EDYCJI ODPOWIEDZI -->
+                                                    <form action="/comments/<%= reply.id %>/edit" method="POST" id="edit-form-<%= reply.id %>" class="d-none mt-2">
                                                         <div class="input-group input-group-sm mb-1">
                                                             <input type="text" name="content" class="form-control" value="<%= reply.content %>" required>
                                                             <button class="btn btn-success" type="submit">Zapisz</button>
@@ -180,12 +183,12 @@
     <script>
         function toggleEditForm(commentId) {
             const form = document.getElementById(`edit-form-${commentId}`);
-            form.classList.toggle('d-none');
+            if (form) form.classList.toggle('d-none');
         }
 
         function toggleReplyForm(commentId) {
             const form = document.getElementById(`reply-form-${commentId}`);
-            form.classList.toggle('d-none');
+            if (form) form.classList.toggle('d-none');
         }
     </script>
 

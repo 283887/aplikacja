@@ -325,7 +325,7 @@ app.get('/user/menu', (req, res) => {
     res.render('userMenu', { user: req.user, error: null, success: null });
 });
 
-// Zmiana nazwy użytkownika (poprawiona walidacja i obsługa pól)
+// Zmiana nazwy użytkownika
 app.post('/user/update-username', checkAuth, async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
@@ -616,27 +616,36 @@ const handleCommentEdit = async (req, res) => {
     }
 };
 
-app.post('/comments/:id', handleCommentEdit);
+app.post('/comments/:id/edit', handleCommentEdit);
 app.put('/comments/:id', handleCommentEdit);
 
-// Usuwanie komentarza
-app.delete('/comments/:id', async (req, res) => {
+// Uniwersalna obsługa usuwania komentarza i odpowiedzi (dla DELETE, POST /comments/:id oraz POST /comments/:id/delete)
+const handleCommentDelete = async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
         const commentId = parseInt(req.params.id);
-        const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+        const comment = await prisma.comment.findUnique({ 
+            where: { id: commentId }
+        });
 
         if (!comment || comment.userId !== req.user.id) {
             return res.status(403).send('Brak uprawnień do usunięcia tego komentarza.');
         }
 
-        await prisma.comment.delete({ where: { id: commentId } });
+        await prisma.comment.delete({ 
+            where: { id: commentId } 
+        });
+
         res.redirect('back');
     } catch (err) {
-        console.error(err);
+        console.error('Błąd podczas usuwania komentarza:', err);
         res.redirect('back');
     }
-});
+};
+
+app.delete('/comments/:id', handleCommentDelete);
+app.post('/comments/:id', handleCommentDelete);
+app.post('/comments/:id/delete', handleCommentDelete);
 
 // ==========================================
 // 2FA - GOOGLE AUTHENTICATOR (TOTP)
