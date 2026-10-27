@@ -4,115 +4,191 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= movie.title %> - FilmwebClone</title>
-    <!-- Bootstrap 5 CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body class="bg-light">
 
-    <!-- Nawigacja -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand fw-bold text-warning" href="/">
-                <i class="bi bi-film"></i> FilmwebClone
-            </a>
-            <div class="d-flex align-items-center">
-                <a href="/" class="btn btn-outline-light me-2">
-                    <i class="bi bi-house"></i> Strona główna
-                </a>
+            <a class="navbar-brand" href="/">FilmwebClone</a>
+            <div class="ms-auto">
                 <% if (user) { %>
-                    <a href="/user/menu" class="btn btn-warning me-2">
-                        <i class="bi bi-person-circle"></i> Menu użytkownika
-                    </a>
-                    <a href="/auth/logout" class="btn btn-outline-danger">Wyloguj</a>
+                    <span class="text-white me-3">Witaj, <%= user.username %>!</span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Wyloguj</a>
                 <% } else { %>
-                    <a href="/login" class="btn btn-warning">Zaloguj się</a>
+                    <a href="/login" class="btn btn-outline-light btn-sm me-2">Zaloguj</a>
+                    <a href="/register" class="btn btn-primary btn-sm">Rejestracja</a>
                 <% } %>
             </div>
         </div>
     </nav>
 
-    <!-- Główna zawartość -->
-    <main class="container my-5">
-        <div class="row justify-content-center">
+    <main class="container mb-5">
+        <!-- Sekcja szczegółów filmu -->
+        <div class="row bg-white p-4 rounded shadow-sm mb-4">
             <div class="col-md-8">
-
-                <!-- Szczegóły filmu -->
-                <div class="card shadow-sm border-0 mb-4 rounded-4 p-4">
-                    <h1 class="fw-bold mb-2"><%= movie.title %></h1>
-                    <p class="text-muted mb-3">Reżyseria: <strong><%= movie.director %></strong> | Rok: <strong><%= movie.year %></strong></p>
-                    <p class="mb-3"><%= movie.description %></p>
-                    <div>
-                        <span class="badge bg-warning text-dark fs-6 p-2">
-                            <i class="bi bi-star-fill"></i> Średnia ocena: 
-                            <%= movie.averageRating !== null ? movie.averageRating.toFixed(1) + ' / 10' : 'Brak ocen' %>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Sekcja dodawania recenzji -->
-                <div class="card shadow-sm border-0 mb-4 rounded-4 p-4">
-                    <h4 class="mb-3"><i class="bi bi-chat-square-text"></i> Dodaj recenzję</h4>
-                    <% if (user) { %>
-                        <form action="/movies/<%= movie.id %>/review" method="POST">
-                            <div class="mb-3">
-                                <label for="rating" class="form-label">Ocena (1-10)</label>
-                                <select class="form-select" id="rating" name="rating" required>
-                                    <option value="" disabled selected>Wybierz ocenę</option>
-                                    <% for(let i = 1; i <= 10; i++) { %>
-                                        <option value="<%= i %>"><%= i %> / 10</option>
-                                    <% } %>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="comment" class="form-label">Komentarz</label>
-                                <textarea class="form-control" id="comment" name="comment" rows="3" required placeholder="Napisz co sądzisz o tym filmie..."></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-warning fw-semibold">Dodaj recenzję</button>
-                        </form>
-                    <% } else { %>
-                        <p class="text-muted mb-0">Musisz być <a href="/login">zalogowany</a>, aby dodać recenzję.</p>
-                    <% } %>
-                </div>
-
-                <!-- Lista recenzji -->
-                <h3 class="mb-3">Recenzje użytkowników (<%= movie.reviews.length %>)</h3>
-                <% if (movie.reviews.length === 0) { %>
-                    <p class="text-muted">Ten film nie ma jeszcze żadnych recenzji. Bądź pierwszy!</p>
-                <% } else { %>
-                    <% movie.reviews.forEach(review => { %>
-                        <div class="card shadow-sm border-0 mb-3 rounded-3">
-                            <div class="card-body">
-                                <div class="d-flex align-items-center mb-2">
-                                    <!-- Awatar użytkownika w recenzji -->
-                                    <% if (review.user && review.user.profileImage) { %>
-                                        <img src="<%= review.user.profileImage %>" alt="Avatar" class="rounded-circle border me-2" style="width: 45px; height: 45px; object-fit: cover;">
-                                    <% } else { %>
-                                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 45px; height: 45px; font-size: 18px;">
-                                            <i class="bi bi-person"></i>
-                                        </div>
-                                    <% } %>
-                                    <div>
-                                        <h6 class="mb-0 fw-bold"><%= review.user ? review.user.username : 'Nieznany użytkownik' %></h6>
-                                        <small class="text-warning">
-                                            <% for(let i = 1; i <= 10; i++) { %>
-                                                <i class="bi bi-star<%= i <= review.rating ? '-fill' : '' %>"></i>
-                                            <% } %>
-                                            (<%= review.rating %>/10)
-                                        </small>
-                                    </div>
-                                </div>
-                                <p class="card-text mt-2 mb-0"><%= review.comment %></p>
-                            </div>
-                        </div>
-                    <% }) %>
-                <% } %>
-
+                <h1 class="fw-bold"><%= movie.title %></h1>
+                <p class="text-muted">Reżyseria: <strong><%= movie.director %></strong></p>
+                <hr>
+                <p class="lead"><%= movie.description %></p>
             </div>
+            <div class="col-md-4 text-center d-flex flex-column justify-content-center align-items-center bg-light rounded p-3">
+                <h3 class="text-warning mb-0"><i class="bi bi-star-fill"></i> <%= movie.averageRating ? movie.averageRating.toFixed(1) : 'Brak' %></h3>
+                <small class="text-muted">Średnia ocena</small>
+
+                <!-- Formularz oceny filmu dla zalogowanych (1 ocena na użytkownika) -->
+                <% if (user) { %>
+                    <form action="/movies/<%= movie.id %>/rate" method="POST" class="mt-3 w-100">
+                        <div class="input-group input-group-sm">
+                            <select name="value" class="form-select" required>
+                                <option value="" selected disabled>Twoja ocena (1-10)</option>
+                                <% for(let i = 1; i <= 10; i++) { %>
+                                    <option value="<%= i %>" <%= userRating && userRating.value === i ? 'selected' : '' %>><%= i %> / 10</option>
+                                <% } %>
+                            </select>
+                            <button class="btn btn-primary" type="submit"><%= userRating ? 'Zmień' : 'Oceń' %></button>
+                        </div>
+                    </form>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Sekcja komentarzy -->
+        <div class="bg-white p-4 rounded shadow-sm">
+            <h3 class="mb-4">Komentarze</h3>
+
+            <!-- Formularz nowego głównego komentarza -->
+            <% if (user) { %>
+                <form action="/movies/<%= movie.id %>/comments" method="POST" class="mb-4">
+                    <div class="mb-3">
+                        <textarea name="content" class="form-control" rows="3" placeholder="Napisz co myślisz o tym filmie..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Dodaj komentarz</button>
+                </form>
+            <% } else { %>
+                <p class="text-muted"><a href="/login">Zaloguj się</a>, aby dodać komentarz lub ocenę.</p>
+            <% } %>
+
+            <hr>
+
+            <!-- Lista komentarzy (główne + zagnieżdżone odpowiedzi) -->
+            <% if (comments && comments.length > 0) { %>
+                <% comments.forEach(comment => { %>
+                    <div class="card mb-3 border-0 bg-light">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="card-subtitle mb-0 text-primary fw-bold"><%= comment.user.username %></h6>
+                                <small class="text-muted">
+                                    <%= new Date(comment.createdAt).toLocaleDateString('pl-PL') %>
+                                    <% if (comment.isEdited) { %>
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">edytowano</span>
+                                    <% } %>
+                                </small>
+                            </div>
+
+                            <!-- Treść komentarza -->
+                            <p class="card-text mb-2" id="comment-text-<%= comment.id %>"><%= comment.content %></p>
+
+                            <!-- Przyciski akcji dla właściciela komentarza -->
+                            <% if (user && user.id === comment.userId) { %>
+                                <div class="mb-2">
+                                    <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.8rem;" onclick="toggleEditForm('<%= comment.id %>')">Edytuj</button>
+                                    <form action="/comments/<%= comment.id %>?_method=DELETE" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.8rem;" onclick="return confirm('Na pewno usunąć komentarz?')">Usuń</button>
+                                    </form>
+                                </div>
+
+                                <!-- Ukryty formularz edycji -->
+                                <form action="/comments/<%= comment.id %>?_method=PUT" method="POST" id="edit-form-<%= comment.id %>" class="d-none mt-2">
+                                    <div class="input-group input-group-sm mb-2">
+                                        <input type="text" name="content" class="form-control" value="<%= comment.content %>" required>
+                                        <button class="btn btn-success" type="submit">Zapisz</button>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="toggleEditForm('<%= comment.id %>')">Anuluj</button>
+                                    </div>
+                                </form>
+                            <% } %>
+
+                            <!-- Przycisk odpowiedzi -->
+                            <% if (user) { %>
+                                <button class="btn btn-link btn-sm p-0 text-decoration-none text-muted" style="font-size: 0.85rem;" onclick="toggleReplyForm('<%= comment.id %>')">
+                                    <i class="bi bi-reply"></i> Odpowiedz
+                                </button>
+
+                                <!-- Ukryty formularz odpowiedzi -->
+                                <form action="/movies/<%= movie.id %>/comments" method="POST" id="reply-form-<%= comment.id %>" class="d-none mt-2">
+                                    <input type="hidden" name="parentId" value="<%= comment.id %>">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="content" class="form-control" placeholder="Napisz odpowiedź..." required>
+                                        <button class="btn btn-outline-primary" type="submit">Wyślij</button>
+                                    </div>
+                                </form>
+                            <% } %>
+
+                            <!-- Zagnieżdżone odpowiedzi (Replies) -->
+                            <% if (comment.replies && comment.replies.length > 0) { %>
+                                <div class="ms-4 mt-3 border-start ps-3 border-2">
+                                    <% comment.replies.forEach(reply => { %>
+                                        <div class="card mb-2 bg-white border-0 shadow-sm">
+                                            <div class="card-body py-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <span class="text-primary fw-bold" style="font-size: 0.9rem;"><%= reply.user.username %></span>
+                                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                                        <%= new Date(reply.createdAt).toLocaleDateString('pl-PL') %>
+                                                        <% if (reply.isEdited) { %>
+                                                            <span class="badge bg-secondary ms-1" style="font-size: 0.6rem;">edytowano</span>
+                                                        <% } %>
+                                                    </small>
+                                                </div>
+                                                <p class="card-text mb-1" style="font-size: 0.9rem;"><%= reply.content %></p>
+
+                                                <!-- Akcje dla odpowiedzi -->
+                                                <% if (user && user.id === reply.userId) { %>
+                                                    <div class="mb-1">
+                                                        <button class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size: 0.75rem;" onclick="toggleEditForm('<%= reply.id %>')">Edytuj</button>
+                                                        <form action="/comments/<%= reply.id %>?_method=DELETE" method="POST" class="d-inline">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size: 0.75rem;" onclick="return confirm('Usunąć odpowiedź?')">Usuń</button>
+                                                        </form>
+                                                    </div>
+
+                                                    <form action="/comments/<%= reply.id %>?_method=PUT" method="POST" id="edit-form-<%= reply.id %>" class="d-none mt-2">
+                                                        <div class="input-group input-group-sm mb-1">
+                                                            <input type="text" name="content" class="form-control" value="<%= reply.content %>" required>
+                                                            <button class="btn btn-success" type="submit">Zapisz</button>
+                                                            <button class="btn btn-outline-secondary" type="button" onclick="toggleEditForm('<%= reply.id %>')">Anuluj</button>
+                                                        </div>
+                                                    </form>
+                                                <% } %>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p class="text-muted">Brak komentarzy. Bądź pierwszy!</p>
+            <% } %>
         </div>
     </main>
 
-    <!-- Bootstrap 5 JS Bundle CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Skrypty JS do obsługi rozwijania formularzy edycji/odpowiedzi -->
+    <script>
+        function toggleEditForm(commentId) {
+            const form = document.getElementById(`edit-form-${commentId}`);
+            form.classList.toggle('d-none');
+        }
+
+        function toggleReplyForm(commentId) {
+            const form = document.getElementById(`reply-form-${commentId}`);
+            form.classList.toggle('d-none');
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

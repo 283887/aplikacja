@@ -9,50 +9,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Tabela Użytkowników
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  email     String   @unique
-  password  String   // Zaszyfrowane hasło
-  profileImage  String?
-  resetToken       String?   @unique
-  resetTokenExpiry DateTime?
-  createdAt DateTime @default(now())
-  reviews   Review[] // Relacja do recenzji
-  twoFactorSecret String?
-  isTwoFactorEnabled Boolean @default(false)
+  id                 Int       @id @default(autoincrement())
+  username           String    @unique
+  email              String    @unique
+  password           String
+  profileImage       String?
+  resetToken         String?   @unique
+  resetTokenExpiry   DateTime?
+  createdAt          DateTime  @default(now())
+  
+  ratings            Rating[]
+  comments           Comment[]
+
+  twoFactorSecret    String?
+  isTwoFactorEnabled Boolean   @default(false)
 }
 
-// 2. Tabela Filmów
 model Movie {
-  id            Int      @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   title         String
   director      String
   description   String
-  averageRating Float?   @default(0.0) // Średnia ocen
-  reviews       Review[] // Relacja do recenzji
-  createdAt     DateTime @default(now())
+  averageRating Float?    @default(0.0)
+  
+  ratings       Rating[]
+  comments      Comment[]
+  
+  createdAt     DateTime  @default(now())
 }
 
-// 3. Tabela Ocen i Komentarzy (Łącząca użytkownika z filmem)
-model Review {
+// Osobna tabela na ocenę (1-10) - dokładnie jedna na użytkownika dla danego filmu
+model Rating {
   id        Int      @id @default(autoincrement())
-  rating    Int?     // Ocena opcjonalna (komentarz może być bez oceny, lub ocena tylko przy pierwszej recenzji)
-  comment   String
-  isEdited  Boolean  @default(false) // <-- Flaga informująca, czy komentarz był edytowany
+  value     Int      // Wartość oceny 1-10
   createdAt DateTime @default(now())
 
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   movieId   Int
-  movie     Movie    @relation(fields: [movieId], references: [id])
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
-  // Obsługa odpowiedzi na komentarze (Self-relation)
+  @@unique([userId, movieId]) // Użytkownik może ocenić film tylko raz
+}
+
+// Tabela na komentarze oraz odpowiedzi (Self-relation) - użytkownik może dodać ich wiele
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  isEdited  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  movieId   Int
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  // Wątkowanie (odpowiedzi na komentarze)
   parentId  Int?
-  parent    Review?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Review[] @relation("CommentReplies")
-
-  @@unique([userId, movieId]) // <-- KLUCZOWE: Użytkownik może mieć tylko jeden wpis (ocenę/recenzję) dla danego filmu
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
 }

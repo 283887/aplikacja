@@ -4,8 +4,9 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Wyczyszczenie starej bazy danych
-  await prisma.review.deleteMany();
+  // Wyczyszczenie bazy danych (najpierw tabele zależne, potem rodzice)
+  await prisma.comment.deleteMany();
+  await prisma.rating.deleteMany();
   await prisma.movie.deleteMany();
   await prisma.user.deleteMany();
 
@@ -24,7 +25,7 @@ async function main() {
     data: {
       title: 'Incepcja',
       director: 'Christopher Nolan',
-      description: 'Złodziej, który kradnie korporacyjne seksecrets poprzez technologiczne wchodzenie w snów, otrzymuje zadanie wszczepienia idei.',
+      description: 'Złodziej, który kradnie korporacyjne sekrety poprzez technologiczne wchodzenie w sny, otrzymuje zadanie wszczepienia idei.',
       averageRating: 9.0,
     },
   });
@@ -47,17 +48,35 @@ async function main() {
     },
   });
 
-  // Dodanie przykładowej recenzji
-  await prisma.review.create({
+  // Dodanie przykładowej oceny (Rating)
+  await prisma.rating.create({
     data: {
-      rating: 9,
-      comment: 'Absolutne arcydzieło kinematografii!',
+      value: 9,
       userId: user.id,
       movieId: movie1.id,
     },
   });
 
-  console.log('Baza danych została uzupełniona przykładowymi danymi!');
+  // Dodanie przykładowego komentarza (Comment)
+  const comment = await prisma.comment.create({
+    data: {
+      content: 'Absolutne arcydzieło kinematografii!',
+      userId: user.id,
+      movieId: movie1.id,
+    },
+  });
+
+  // Dodanie przykładowej odpowiedzi na komentarz (Reply)
+  await prisma.comment.create({
+    data: {
+      content: 'Zgadzam się w 100%, końcówka jest genialna.',
+      userId: user.id,
+      movieId: movie1.id,
+      parentId: comment.id, // Powiązanie jako odpowiedź do powyższego komentarza
+    },
+  });
+
+  console.log('Baza danych została pomyślnie uzupełniona nowymi danymi!');
 }
 
 main()

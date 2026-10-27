@@ -86,19 +86,10 @@ app.get('/', async (req, res) => {
                     { title: { contains: search, mode: 'insensitive' } },
                     { director: { contains: search, mode: 'insensitive' } },
                 ]
-            },
-            include: { reviews: true }
+            }
         });
 
-        // Obliczanie średniej ocen dla filmów (tylko z recenzji posiadających ocenę)
-        const moviesWithRatings = movies.map(movie => {
-            const ratedReviews = movie.reviews.filter(r => r.rating !== null);
-            const sum = ratedReviews.reduce((acc, r) => acc + r.rating, 0);
-            const averageRating = ratedReviews.length > 0 ? sum / ratedReviews.length : null;
-            return { ...movie, averageRating };
-        });
-
-        res.render('index', { user: req.user, movies: moviesWithRatings, searchTerm: search });
+        res.render('index', { user: req.user, movies, searchTerm: search });
     } catch (err) {
         console.error(err);
         res.status(500).send("Błąd serwera");
@@ -128,9 +119,9 @@ app.post('/auth/register', async (req, res) => {
             return res.render('login', { error: 'Podaj poprawny adres e-mail (np. user@domena.pl).', success: null });
         }
 
-        if (!validator.isAlphanumeric(username, 'pl-PL') || username.length < 3 || username.length > 25) {
+        if (username.length < 3 || username.length > 25) {
             return res.render('login', { 
-                error: 'Nazwa użytkownika musi mieć od 3 do 25 znaków i zawierać wyłącznie litery i cyfry.', 
+                error: 'Nazwa użytkownika musi mieć od 3 do 25 znaków.', 
                 success: null 
             });
         }
@@ -334,6 +325,97 @@ app.get('/user/menu', (req, res) => {
     res.render('userMenu', { user: req.user, error: null, success: null });
 });
 
+// Zmiana nazwy użytkownika (poprawiona walidacja i obsługa pól)
+app.post('/user/update-username', checkAuth, async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+    try {
+        const newUsername = (req.body.newUsername || req.body.username || '').trim();
+
+        if (newUsername.length < 3 || newUsername.length > 25) {
+            return res.render('userMenu', { 
+                user: req.user, 
+                error: 'Nazwa użytkownika musi mieć od 3 do 25 znaków.', 
+                success: null 
+            });
+        }
+
+        const isValidFormat = /^[a-zA-Z0-9_ -]+$/.test(newUsername);
+        if (!isValidFormat) {
+            return res.render('userMenu', { 
+                user: req.user, 
+                error: 'Nazwa użytkownika może zawierać tylko litery, cyfry, spacje, myślniki i podkreślenia.', 
+                success: null 
+            });
+        }
+
+        const existing = await prisma.user.findFirst({ 
+            where: { 
+                username: newUsername,
+                NOT: { id: req.user.id } 
+            } 
+        });
+
+        if (existing) {
+            return res.render('userMenu', { 
+                user: req.user, 
+                error: 'Ta nazwa użytkownika jest już zajęta.', 
+                success: null 
+            });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { username: newUsername }
+        });
+
+        res.render('userMenu', { 
+            user: updatedUser, 
+            error: null, 
+            success: 'Nazwa użytkownika została zaktualizowana!' 
+        });
+    } catch (err) {
+        console.error(err);
+        res.render('userMenu', { 
+            user: req.user, 
+            error: 'Wystąpił błąd podczas zmiany nazwy.', 
+            success: null 
+        });
+    }
+});
+
+// Zmiana hasła z poziomu menu użytkownika
+app.post('/user/update-password', checkAuth, async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.render('userMenu', { user: req.user, error: 'Wszystkie pola hasła są wymagane.', success: null });
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, req.user.password);
+        if (!isMatch) {
+            return res.render('userMenu', { user: req.user, error: 'Obecne hasło jest nieprawidłowe.', success: null });
+        }
+
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.render('userMenu', { user: req.user, error: 'Nowe hasło musi mieć min. 8 znaków, dużą literę i cyfrę.', success: null });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { password: hashedPassword }
+        });
+
+        res.render('userMenu', { user: updatedUser, error: null, success: 'Hasło zostało zmienione pomyślnie!' });
+    } catch (err) {
+        console.error(err);
+        res.render('userMenu', { user: req.user, error: 'Błąd podczas zmiany hasła.', success: null });
+    }
+});
+
 // Endpoint do przesyłania zdjęcia profilowego
 app.post('/user/upload-avatar', checkAuth, (req, res) => {
     if (!req.user) return res.redirect('/login');
@@ -407,7 +489,8 @@ app.post('/user/delete-avatar', checkAuth, async (req, res) => {
 app.post('/user/delete', async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
-        await prisma.review.deleteMany({ where: { userId: req.user.id } });
+        await prisma.rating.deleteMany({ where: { userId: req.user.id } });
+        await prisma.comment.deleteMany({ where: { userId: req.user.id } });
         await prisma.user.delete({ where: { id: req.user.id } });
 
         res.clearCookie('token');
@@ -418,14 +501,15 @@ app.post('/user/delete', async (req, res) => {
     }
 });
 
-// 8. Szczegóły filmu i recenzje
+// 8. Szczegóły filmu, oceny i komentarze
 app.get('/movies/:id', async (req, res) => {
     try {
         const movieId = parseInt(req.params.id);
         const movie = await prisma.movie.findUnique({
             where: { id: movieId },
             include: {
-                reviews: {
+                ratings: true,
+                comments: {
                     where: { parentId: null },
                     include: {
                         user: true,
@@ -441,59 +525,63 @@ app.get('/movies/:id', async (req, res) => {
 
         if (!movie) return res.status(404).send("Film nie został znaleziony");
 
-        // Obliczanie średniej ocen ze wszystkich ocenionych recenzji
-        const ratedReviews = await prisma.review.findMany({
-            where: { movieId: movieId, rating: { not: null } }
-        });
-        const sum = ratedReviews.reduce((acc, r) => acc + r.rating, 0);
-        const averageRating = ratedReviews.length > 0 ? sum / ratedReviews.length : null;
+        let userRating = null;
+        if (req.user) {
+            userRating = await prisma.rating.findUnique({
+                where: {
+                    userId_movieId: { userId: req.user.id, movieId: movieId }
+                }
+            });
+        }
 
-        res.render('movie', { user: req.user, movie: { ...movie, averageRating }, error: null, success: null });
+        res.render('movie', { user: req.user, movie, comments: movie.comments, userRating, error: null, success: null });
     } catch (err) {
         console.error(err);
         res.status(500).send("Błąd serwera");
     }
 });
 
-// 9. Dodawanie lub edycja recenzji / odpowiedzi (1 ocena na konto per film)
-app.post('/movies/:id/review', async (req, res) => {
+// 9. System oceniania (1 ocena 1-10 na użytkownika per film)
+app.post('/movies/:id/rate', async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
         const movieId = parseInt(req.params.id);
-        const { rating, comment, parentId } = req.body;
+        const value = parseInt(req.body.value);
 
-        // Jeśli to odpowiedź na inny komentarz
-        if (parentId) {
-            await prisma.review.create({
-                data: {
-                    comment,
-                    rating: null,
-                    userId: req.user.id,
-                    movieId: movieId,
-                    parentId: parseInt(parentId)
-                }
-            });
-            return res.redirect(`/movies/${movieId}`);
-        }
+        await prisma.rating.upsert({
+            where: { userId_movieId: { userId: req.user.id, movieId } },
+            update: { value },
+            create: { value, userId: req.user.id, movieId }
+        });
 
-        // Główna recenzja (Upsert: 1 ocena/wpis na użytkownika per film)
-        await prisma.review.upsert({
-            where: {
-                userId_movieId: {
-                    userId: req.user.id,
-                    movieId: movieId
-                }
-            },
-            update: {
-                rating: rating ? parseInt(rating) : null,
-                comment,
-                isEdited: true
-            },
-            create: {
-                rating: rating ? parseInt(rating) : null,
-                comment,
+        const allRatings = await prisma.rating.findMany({ where: { movieId } });
+        const avg = allRatings.reduce((sum, r) => sum + r.value, 0) / allRatings.length;
+
+        await prisma.movie.update({
+            where: { id: movieId },
+            data: { averageRating: avg }
+        });
+
+        res.redirect(`/movies/${movieId}`);
+    } catch (err) {
+        console.error(err);
+        res.redirect(`/movies/${req.params.id}`);
+    }
+});
+
+// 10. System komentarzy i odpowiedzi (wątkowanie)
+app.post('/movies/:id/comments', async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+    try {
+        const movieId = parseInt(req.params.id);
+        const { content, parentId } = req.body;
+
+        await prisma.comment.create({
+            data: {
+                content,
                 userId: req.user.id,
-                movieId: movieId
+                movieId,
+                parentId: parentId ? parseInt(parentId) : null
             }
         });
 
@@ -504,24 +592,49 @@ app.post('/movies/:id/review', async (req, res) => {
     }
 });
 
-// 10. Usuwanie recenzji / komentarza
-app.post('/reviews/:reviewId/delete', checkAuth, async (req, res) => {
+// Edycja komentarza
+const handleCommentEdit = async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
-        const reviewId = parseInt(req.params.reviewId);
-        const review = await prisma.review.findUnique({ where: { id: reviewId } });
+        const commentId = parseInt(req.params.id);
+        const { content } = req.body;
 
-        if (!review || review.userId !== req.user.id) {
-            return res.redirect('/');
+        const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+        if (!comment || comment.userId !== req.user.id) {
+            return res.status(403).send('Brak uprawnień do edycji tego komentarza.');
         }
 
-        const movieId = review.movieId;
-        await prisma.review.delete({ where: { id: reviewId } });
+        await prisma.comment.update({
+            where: { id: commentId },
+            data: { content, isEdited: true }
+        });
 
-        res.redirect(`/movies/${movieId}`);
+        res.redirect('back');
     } catch (err) {
         console.error(err);
-        res.redirect('/');
+        res.redirect('back');
+    }
+};
+
+app.post('/comments/:id', handleCommentEdit);
+app.put('/comments/:id', handleCommentEdit);
+
+// Usuwanie komentarza
+app.delete('/comments/:id', async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+    try {
+        const commentId = parseInt(req.params.id);
+        const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+
+        if (!comment || comment.userId !== req.user.id) {
+            return res.status(403).send('Brak uprawnień do usunięcia tego komentarza.');
+        }
+
+        await prisma.comment.delete({ where: { id: commentId } });
+        res.redirect('back');
+    } catch (err) {
+        console.error(err);
+        res.redirect('back');
     }
 });
 
