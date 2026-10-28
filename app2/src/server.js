@@ -11,6 +11,7 @@ const authenticator = otplib.authenticator || otplib;
 const QRCode = require('qrcode');
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
+const sanitizeHtml = require('sanitize-html');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -592,9 +593,19 @@ app.post('/movies/:id/comments', async (req, res) => {
         const movieId = parseInt(req.params.id);
         const { content, parentId } = req.body;
 
+// Sanityzacja: dozwolone tylko proste tagi formatowania tekstu
+        const cleanContent = sanitizeHtml(req.body.content || '', {
+            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
+            allowedAttributes: { 'a': ['href'] }
+        }).trim();
+
+        if (!cleanContent) {
+            return res.redirect(`/movies/${movieId}`);
+        }
+
         await prisma.comment.create({
             data: {
-                content,
+                content: cleanContent,
                 userId: req.user.id,
                 movieId,
                 parentId: parentId ? parseInt(parentId) : null
@@ -613,7 +624,16 @@ const handleCommentEdit = async (req, res) => {
     if (!req.user) return res.redirect('/login');
     try {
         const commentId = parseInt(req.params.id);
-        const { content } = req.body;
+
+        // Sanityzacja edytowanej treści
+        const cleanContent = sanitizeHtml(req.body.content || '', {
+            allowedTags: ['b', 'i', 'em', 'strong', 'a'],
+            allowedAttributes: { 'a': ['href'] }
+        }).trim();
+
+        if (!cleanContent) {
+            return res.redirect('back');
+        }
 
         const comment = await prisma.comment.findUnique({ where: { id: commentId } });
         if (!comment || comment.userId !== req.user.id) {
@@ -622,7 +642,7 @@ const handleCommentEdit = async (req, res) => {
 
         await prisma.comment.update({
             where: { id: commentId },
-            data: { content, isEdited: true }
+            data: { content: cleanContent, isEdited: true }
         });
 
         res.redirect('back');
