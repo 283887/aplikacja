@@ -10,6 +10,7 @@ const otplib = require('otplib');
 const authenticator = otplib.authenticator || otplib;
 const QRCode = require('qrcode');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -25,6 +26,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
+
+//Limit błędnych logowań
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minut
+    max: 5, // max 5 zapytań z jednego IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        res.status(429).render('login', {
+            error: 'Zbyt wiele prób logowania. Odczekaj 15 minut przed kolejną próbą.',
+            success: null
+        });
+    }
+});
 
 // Konfiguracja Multer (upload zdjęć profilowych, ograniczenie rozmiaru do 2MB i filtr rozszerzeń)
 const storage = multer.diskStorage({
@@ -156,7 +171,7 @@ app.post('/auth/register', async (req, res) => {
 });
 
 // 4. Obsługa Logowania
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', authLimiter, async (req, res) => {
     try {
         const { identifier, password } = req.body;
 
