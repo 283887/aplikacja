@@ -29,8 +29,9 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 //Limit błędnych logowań
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minut
+    windowMs: 1 * 60 * 1000, // 15 minut
     max: 5, // max 5 zapytań z jednego IP
+    skipSuccessfulRequests: true, // NIE zliczaj udanych logowań (status < 400)
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
@@ -180,12 +181,12 @@ app.post('/auth/login', authLimiter, async (req, res) => {
         });
 
         if (!user) {
-            return res.render('login', { error: 'Nieprawidłowy login lub hasło.', success: null });
+            return res.status(400).render('login', { error: 'Nieprawidłowy login lub hasło.', success: null });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            return res.render('login', { error: 'Nieprawidłowy login lub hasło.', success: null });
+            return res.status(400).render('login', { error: 'Nieprawidłowy login lub hasło.', success: null });
         }
 
         if (user.isTwoFactorEnabled) {
