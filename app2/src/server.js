@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 //Limit błędnych logowań
 const authLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 15 minut
+    windowMs: 15 * 60 * 1000, // 15 minut
     max: 5, // max 5 zapytań z jednego IP
     skipSuccessfulRequests: true, // NIE zliczaj udanych logowań (status < 400)
     standardHeaders: true,
