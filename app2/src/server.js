@@ -518,6 +518,40 @@ app.post('/user/delete', async (req, res) => {
     }
 });
 
+// emotki
+app.post('/comments/:commentId/reactions', async (req, res) => {
+    if (!req.user) return res.redirect('/login');
+
+    try {
+        const commentId = parseInt(req.params.commentId);
+        const allowed = ['👍', '❤️', '😂', '😮', '👎'];
+        const type = String(req.body.type || '').trim();
+
+        if (!allowed.includes(type)) {
+            return res.redirect('back');
+        }
+
+        await prisma.commentReaction.upsert({
+            where: {
+                userId_commentId: {
+                    userId: req.user.id,
+                    commentId
+                }
+            },
+            update: { type },
+            create: {
+                type,
+                userId: req.user.id,
+                commentId
+            }
+        });
+
+        res.redirect('back');
+    } catch (err) {
+        console.error(err);
+        res.redirect('back');
+    }
+});
 // 8. Szczegóły filmu, oceny i komentarze
 app.get('/movies/:id', async (req, res) => {
     try {
@@ -533,6 +567,9 @@ app.get('/movies/:id', async (req, res) => {
                         replies: {
                             include: { user: true },
                             orderBy: { createdAt: 'asc' }
+                        },
+                        reactions: {
+                            include: { user: true }
                         }
                     },
                     orderBy: { createdAt: 'desc' }
@@ -551,7 +588,25 @@ app.get('/movies/:id', async (req, res) => {
             });
         }
 
-        res.render('movie', { user: req.user, movie, comments: movie.comments, userRating, error: null, success: null });
+        const commentsWithUserReaction = (movie.comments || []).map(comment => {
+            const userReaction = req.user
+                ? (comment.reactions || []).find(r => r.userId === req.user.id)?.type || null
+                : null;
+
+            return {
+                ...comment,
+                userReaction
+            };
+        });
+
+        res.render('movie', {
+            user: req.user,
+            movie,
+            comments: commentsWithUserReaction,
+            userRating,
+            error: null,
+            success: null
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send("Błąd serwera");

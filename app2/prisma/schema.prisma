@@ -18,9 +18,10 @@ model User {
   resetToken         String?   @unique
   resetTokenExpiry   DateTime?
   createdAt          DateTime  @default(now())
-  
+
   ratings            Rating[]
   comments           Comment[]
+  commentReactions   CommentReaction[]
 
   twoFactorSecret    String?
   isTwoFactorEnabled Boolean   @default(false)
@@ -32,17 +33,17 @@ model Movie {
   director      String
   description   String
   averageRating Float?    @default(0.0)
-  
+
   ratings       Rating[]
   comments      Comment[]
-  
+
   createdAt     DateTime  @default(now())
 }
 
-// Osobna tabela na ocenę (1-10) - dokładnie jedna na użytkownika dla danego filmu
+// Osobna tabela na ocenę
 model Rating {
   id        Int      @id @default(autoincrement())
-  value     Int      // Wartość oceny 1-10
+  value     Int
   createdAt DateTime @default(now())
 
   userId    Int
@@ -51,10 +52,10 @@ model Rating {
   movieId   Int
   movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, movieId]) // Użytkownik może ocenić film tylko raz
+  @@unique([userId, movieId])
 }
 
-// Tabela na komentarze oraz odpowiedzi (Self-relation) - użytkownik może dodać ich wiele
+// Komentarz
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
@@ -68,8 +69,24 @@ model Comment {
   movieId   Int
   movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
 
-  // Wątkowanie (odpowiedzi na komentarze)
   parentId  Int?
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
+
+  reactions CommentReaction[]
+}
+
+// Reakcja do komentarza
+model CommentReaction {
+  id        Int      @id @default(autoincrement())
+  type      String
+  createdAt DateTime @default(now())
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  commentId Int
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
 }

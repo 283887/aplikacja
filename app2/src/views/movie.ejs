@@ -80,7 +80,46 @@
                     <div class="card mb-3 border-0 bg-light">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="card-subtitle mb-0 text-primary fw-bold"><%= comment.user ? comment.user.username : 'Nieznany' %></h6>
+                                <div class="d-flex align-items-center mb-2">
+    <div class="me-2">
+        <% if (comment.user && comment.user.profileImage) { %>
+            <img src="<%= comment.user.profileImage %>" alt="Avatar użytkownika" class="rounded-circle border border-warning" style="width: 40px; height: 40px; object-fit: cover;">
+        <% } else { %>
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-size: 1rem;">
+                <%= (comment.user && comment.user.username) ? comment.user.username.charAt(0).toUpperCase() : 'U' %>
+            </div>
+        <% } %>
+    </div>
+
+    <div>
+        <h6 class="card-subtitle mb-0 text-primary fw-bold">
+            <%= comment.user ? comment.user.username : 'Nieznany' %>
+        </h6>
+    </div>
+</div>
+<%
+const reactionTypes = ['👍', '❤️', '😂', '😮', '👎'];
+const reactionCounts = {};
+(comment.reactions || []).forEach(r => {
+    reactionCounts[r.type] = (reactionCounts[r.type] || 0) + 1;
+});
+%>
+
+<div class="mt-3 d-flex flex-wrap gap-2">
+    <% reactionTypes.forEach(type => { %>
+        <form action="/comments/<%= comment.id %>/reactions" method="POST" class="d-inline">
+            <input type="hidden" name="type" value="<%= type %>">
+            <button
+                type="submit"
+                class="btn btn-sm <%= comment.userReaction === type ? 'btn-primary' : 'btn-light border' %>"
+                title="Reakcja <%= type %>"
+            >
+                <%= type %>
+                <span class="badge bg-light text-dark ms-1"><%= reactionCounts[type] || 0 %></span>
+            </button>
+        </form>
+    <% }) %>
+</div>
                                 <small class="text-muted">
                                     <%= new Date(comment.createdAt).toLocaleDateString('pl-PL') %>
                                     <% if (comment.isEdited) { %>
@@ -135,7 +174,20 @@
                                         <div class="card mb-2 bg-white border-0 shadow-sm">
                                             <div class="card-body py-2">
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                                    <span class="text-primary fw-bold" style="font-size: 0.9rem;"><%= reply.user ? reply.user.username : 'Nieznany' %></span>
+                                                    <div class="d-flex align-items-center mb-1">
+    <div class="me-2">
+        <% if (reply.user && reply.user.profileImage) { %>
+            <img src="<%= reply.user.profileImage %>" alt="Avatar użytkownika" class="rounded-circle border border-warning" style="width: 32px; height: 32px; object-fit: cover;">
+        <% } else { %>
+            <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                <%= (reply.user && reply.user.username) ? reply.user.username.charAt(0).toUpperCase() : 'U' %>
+            </div>
+        <% } %>
+    </div>
+    <span class="text-primary fw-bold" style="font-size: 0.9rem;">
+        <%= reply.user ? reply.user.username : 'Nieznany' %>
+    </span>
+</div>
                                                     <small class="text-muted" style="font-size: 0.75rem;">
                                                         <%= new Date(reply.createdAt).toLocaleDateString('pl-PL') %>
                                                         <% if (reply.isEdited) { %>
